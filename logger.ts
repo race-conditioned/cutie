@@ -11,6 +11,7 @@ export class Logger {
   constructor(
     private readonly handler: Handler,
     private readonly baseAttrs: Record<string, unknown> = {},
+    private readonly expand?: boolean,
   ) {}
 
   debug(msg: string, attrs?: Record<string, unknown>): void {
@@ -36,7 +37,17 @@ export class Logger {
    *   logger.With("requestId", id, "userId", uid)
    */
   With(attrs: Record<string, unknown>): Logger {
-    return new Logger(this.handler, { ...this.baseAttrs, ...attrs });
+    return new Logger(this.handler, { ...this.baseAttrs, ...attrs }, this.expand);
+  }
+
+  /** Returns a Logger that forces expanded (multi-line) output for handlers that support it. */
+  expanded(): Logger {
+    return new Logger(this.handler, this.baseAttrs, true);
+  }
+
+  /** Returns a Logger that forces compact (single-line) output for handlers that support it. */
+  compact(): Logger {
+    return new Logger(this.handler, this.baseAttrs, false);
   }
 
   private emit(level: Level, msg: string, attrs?: Record<string, unknown>): void {
@@ -45,6 +56,7 @@ export class Logger {
       msg,
       time: new Date(),
       attrs: { ...this.baseAttrs, ...attrs },
+      expand: this.expand,
     };
     this.handler.Handle(record);
   }

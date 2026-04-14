@@ -2,7 +2,11 @@ import { assertEquals, assertMatch } from "jsr:@std/assert";
 import { JSONHandler, Logger, New, PrettyHandler, PrintAccess, PrintBanner, PrintListening } from "./mod.ts";
 import type { Handler, LogRecord } from "./mod.ts";
 
-// --- capture helper ---
+// --- helpers ---
+
+function stripAnsi(s: string): string {
+  return s.replace(/\x1b\[[0-9;]*m/g, "");
+}
 
 function capture(fn: () => void): { stdout: string; stderr: string } {
   const stdoutLines: string[] = [];
@@ -73,7 +77,7 @@ Deno.test("Logger all levels dispatch correct level field", () => {
 Deno.test("JSONHandler writes JSON to stdout for info", () => {
   const log = New(new JSONHandler());
   const { stdout } = capture(() => log.info("started", { port: 8080 }));
-  const parsed = JSON.parse(stdout);
+  const parsed = JSON.parse(stripAnsi(stdout));
   assertEquals(parsed.level, "info");
   assertEquals(parsed.msg, "started");
   assertEquals(parsed.port, 8080);
@@ -85,6 +89,55 @@ Deno.test("JSONHandler writes to stderr for error", () => {
   const { stdout, stderr } = capture(() => log.error("boom"));
   assertEquals(stdout, "");
   assertMatch(stderr, /boom/);
+});
+
+Deno.test("JSONHandler expand option outputs indented JSON", () => {
+  const log = New(new JSONHandler({ expand: true }));
+  const { stdout } = capture(() => log.info("started", { port: 8080 }));
+  const clean = stripAnsi(stdout);
+  const parsed = JSON.parse(clean);
+  assertEquals(parsed.level, "info");
+  assertEquals(parsed.msg, "started");
+  assertEquals(parsed.port, 8080);
+  assertMatch(clean, /\n/);
+  assertMatch(clean, /^\{\n  /);
+});
+
+Deno.test("Logger.expanded() overrides compact default", () => {
+  const log = New(new JSONHandler());
+  const { stdout } = capture(() => log.expanded().info("tall", { x: 1 }));
+  const clean = stripAnsi(stdout);
+  assertMatch(clean, /\n/);
+  const parsed = JSON.parse(clean);
+  assertEquals(parsed.msg, "tall");
+});
+
+Deno.test("Logger.compact() overrides expanded default", () => {
+  const log = New(new JSONHandler({ expand: true }));
+  const { stdout } = capture(() => log.compact().info("flat", { x: 1 }));
+  const clean = stripAnsi(stdout);
+  assertEquals(clean.includes("\n"), false);
+  const parsed = JSON.parse(clean);
+  assertEquals(parsed.msg, "flat");
+});
+
+Deno.test("JSONHandler color:false outputs plain JSON with no ANSI", () => {
+  const log = New(new JSONHandler({ color: false }));
+  const { stdout } = capture(() => log.info("started", { port: 8080 }));
+  assertEquals(stdout, stripAnsi(stdout));
+  const parsed = JSON.parse(stdout);
+  assertEquals(parsed.level, "info");
+  assertEquals(parsed.msg, "started");
+  assertEquals(parsed.port, 8080);
+});
+
+Deno.test("JSONHandler color:false expand:true outputs indented plain JSON", () => {
+  const log = New(new JSONHandler({ color: false, expand: true }));
+  const { stdout } = capture(() => log.info("started", { port: 8080 }));
+  assertEquals(stdout, stripAnsi(stdout));
+  assertMatch(stdout, /\n/);
+  const parsed = JSON.parse(stdout);
+  assertEquals(parsed.msg, "started");
 });
 
 Deno.test("JSONHandler writes to stderr for warn", () => {
@@ -178,10 +231,6 @@ Deno.test("PrintBanner aligns right border for long keys", () => {
   const lengths = lines.map((l) => stripAnsi(l).length);
   assertEquals(new Set(lengths).size, 1, "all rows should have equal visible width");
 });
-
-function stripAnsi(s: string): string {
-  return s.replace(/\x1b\[[0-9;]*m/g, "");
-}
 
 // --- PrintAccess ---
 

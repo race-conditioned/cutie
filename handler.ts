@@ -10,6 +10,7 @@ export type LogRecord = {
   msg: string;
   time: Date;
   attrs: Record<string, unknown>;
+  expand?: boolean;
 };
 
 /**
