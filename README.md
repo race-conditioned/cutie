@@ -1,6 +1,18 @@
 # cutie
 
-A minimal, pretty structured logger for Deno. Inspired by Go's `log/slog`.
+A minimal, pretty structured logger. Inspired by Go's `log/slog`.
+
+## Install
+
+```sh
+# Deno (JSR)
+deno add @race-conditioned/cutie
+
+# npm
+npm install @race-conditioned/cutie
+```
+
+## Usage
 
 ```ts
 import * as cutie from "@race-conditioned/cutie";

@@ -1,6 +1,6 @@
 {
   "name": "@race-conditioned/cutie",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "exports": "./mod.ts",
   "compilerOptions": {
@@ -8,7 +8,8 @@
   },
   "tasks": {
     "test": "deno test",
-    "check": "deno check mod.ts"
+    "check": "deno check mod.ts",
+    "build:npm": "deno run -A _build_npm.ts"
   },
   "fmt": {
     "lineWidth": 100,
